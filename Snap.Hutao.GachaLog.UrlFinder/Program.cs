@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Snap.Hutao.GachaLog.UrlFinder;
 
@@ -33,6 +34,8 @@ public static class Program
         {
             using (BinaryReader reader = new(fileStream))
             {
+                Regex urlMatch = new("(https.+?game_biz=hk4e.+?)&", RegexOptions.Compiled);
+
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
                     try
@@ -44,8 +47,7 @@ public static class Program
                             byte[] chars = reader.ReadBytesUntil(b => b == 0x00);
                             string result = Encoding.UTF8.GetString(chars, 0, chars.Length);
 
-                            if (result.StartsWith("https://webstatic.mihoyo.com/hk4e/event/e20190909gacha-v2/index.html")
-                                || result.StartsWith("https://hk4e-api.mihoyo.com/event/gacha_info/api/getGachaLog"))
+                            if (urlMatch.Match(result).Success)
                             {
                                 results.Add(result);
                             }
