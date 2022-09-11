@@ -3,19 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace Snap.Hutao.GachaLog.UrlFinder;
 
 public static class Program
 {
+    private const string myPath = @"C:\Program Files\Genshin Impact\Genshin Impact Game";
+    [STAThread]
     public static void Main(string[] args)
     {
-        Console.WriteLine(@"祈愿记录Url查找 - 请输入 [YuanShen.exe] 所在文件夹路径");
-        Console.WriteLine(@"如(D:\Game\Genshin Impact\Genshin Impact Game)");
+        Console.WriteLine(@"祈愿记录Url查找 - 请输入 [YuanShen.exe] 所在文件夹路径, 否则会使用默认地址");
+        Console.WriteLine(myPath);
         string path = Console.ReadLine()!.Trim('"');
+        if (path.Length < 10){
+            path = myPath;
+        }
         if(Directory.Exists(Path.Combine(path, "YuanShen_Data")))
         {
             path = Path.Combine(path, @"YuanShen_Data\webCaches\Cache\Cache_Data\data_2");
@@ -32,58 +36,42 @@ public static class Program
 
         using (FileStream fileStream = new(target, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            using (BinaryReader reader = new(fileStream))
+            using BinaryReader reader = new(fileStream);
+            Regex urlMatch = new("(https.+?game_biz=hk4e.+?)&", RegexOptions.Compiled);
+
+            while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
-                Regex urlMatch = new("(https.+?game_biz=hk4e.+?)&", RegexOptions.Compiled);
-
-                while (reader.BaseStream.Position < reader.BaseStream.Length)
+                try
                 {
-                    try
-                    {
-                        uint test = reader.ReadUInt32();
+                    uint test = reader.ReadUInt32();
 
-                        if (test == 0x2F302F31)
+                    if (test == 0x2F302F31)
+                    {
+                        byte[] chars = reader.ReadBytesUntil(b => b == 0x00);
+                        string result = Encoding.UTF8.GetString(chars, 0, chars.Length);
+
+                        if (urlMatch.Match(result).Success)
                         {
-                            byte[] chars = reader.ReadBytesUntil(b => b == 0x00);
-                            string result = Encoding.UTF8.GetString(chars, 0, chars.Length);
-
-                            if (urlMatch.Match(result).Success)
-                            {
-                                results.Add(result);
-                            }
-
-                            int alignment = sizeof(int) * 4;
-                            // align up
-                            long offset = reader.BaseStream.Position % alignment;
-                            reader.BaseStream.Position += (alignment - offset);
+                            results.Add(result);
                         }
+
+                        int alignment = sizeof(int) * 4;
+                        // align up
+                        long offset = reader.BaseStream.Position % alignment;
+                        reader.BaseStream.Position += (alignment - offset);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
                 }
             }
         }
 
         File.Delete(target);
-        results.Reverse();
-
-        JsonSerializerOptions options = new() 
-        {
-            WriteIndented = true, 
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        };
-
-        string text = JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true });
-        text = text.Replace("\\u0026", "&");
-
-        string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        string output = Path.Combine(desktop, "GachaLogUrls.json");
-        File.WriteAllText(output, text);
-
-        Console.WriteLine(@"全部结果已经复制到桌面上的 [GachaLogUrls.json] 文件，靠前的为最新的Url。");
-        _ = Console.ReadLine();
+        var r = results.Last<string>()??throw new Exception("url is empty");
+        Clipboard.SetText(r);
+        Console.WriteLine("URL已经复制到剪贴板");
     }
 
     public static byte[] ReadBytesUntil(this BinaryReader binaryReader, Func<byte, bool> evaluator)
