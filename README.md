@@ -6,4 +6,4 @@
 * 双击启动
 * 输入 Yuanshen.exe|GenshinImpact.exe 所在文件夹路径
 * 按下回车
-* 在桌面上的 GachaLogUrls.json 文件夹中即可找到你需要的Url
+* 剪贴板中即可找到链接（仅限windows）
