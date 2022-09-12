@@ -15,11 +15,26 @@ public static class Program
     public static void Main(string[] args)
     {
         Console.WriteLine(@"祈愿记录Url查找 - 请输入 [YuanShen.exe] 所在文件夹路径, 否则会使用默认地址");
-        Console.WriteLine(myPath);
-        string path = Console.ReadLine()!.Trim('"');
-        if (path.Length < 10){
-            path = myPath;
+        string path = string.Empty;
+        if (File.Exists($"{Environment.CurrentDirectory}/url.txt"))
+        {
+            path = File.ReadLines("url.txt", Encoding.UTF8)!.First<string>().Trim('"'); 
         }
+        else
+        {
+            path = myPath;
+            File.WriteAllText($"{Environment.CurrentDirectory}/url.txt", myPath, Encoding.UTF8);
+        }
+        Console.WriteLine(path);
+
+        string tempPath = string.Empty;
+        tempPath = Console.ReadLine()!.Trim('"');
+        if (tempPath.Length > 10)
+        {
+           path = tempPath;
+            File.WriteAllText($"{Environment.CurrentDirectory}/url.txt", path, Encoding.UTF8);
+        }
+
         if(Directory.Exists(Path.Combine(path, "YuanShen_Data")))
         {
             path = Path.Combine(path, @"YuanShen_Data\webCaches\Cache\Cache_Data\data_2");
